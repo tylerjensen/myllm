@@ -46,7 +46,7 @@ dataset = load_dataset("json", data_files="../out/formatted_finetune_dataset.jso
 
 # Step 3: Tokenize the Dataset
 def preprocess_function(examples):
-    return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=512)
+    return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=1024)
 
 tokenized_dataset = dataset.map(preprocess_function, batched=True, remove_columns=["text"])
 

@@ -135,7 +135,7 @@ sudo find / -name libcudart.so* 2>/dev/null
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu
 ```
 
-In my case, I had stupidly installed Linux NVIDA drivers in my WSL2 instance. Don't do that.
+In my case, I had stupidly installed Linux NVIDIA drivers in my WSL2 instance. Don't do that.
 
 WSL2 uses the Windows driver. Just download the latest NVIDIA driver for Windows and install it.
 
