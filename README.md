@@ -1,23 +1,33 @@
-# myllm
-Experimentation with fine tuning LLMs for use on ollama.
+# How to Fine Tune a Private LLM on Your Legacy Code Base
 
-## Setup Python venv
-At the parent directory of your code, create a python virtual environment with the included requirements.txt.
+Fine-tuning a Large Language Model (LLM) on your existing code base can significantly boost the model’s relevance and performance for your unique domain. This guide walks you through the complete process of analyzing your legacy code, generating a fine-tuning dataset, and training a model using [Ollama](https://ollama.com/) and tools like `llama.cpp`.
+
+Whether you're working with C#, TypeScript, HTML, Javascript, or Markdown, this experimental tutorial helps you convert your source into meaningful prompts and responses, format the data for training, and fine-tune your own private LLM.
+
+It is far from a completed solution. Think of it as simply a starting point.
+
+---
+## myllm
+---
+
+## Step 1: Set Up a Python Virtual Environment
+
+First, create a Python virtual environment at the root of your project directory.
 
 ```bash
 python -m venv myllm-env
 source myllm-env/bin/activate
 ```
 
-Then install the merged dependencies.
+Then install the required dependencies:
 
 ```bash
 pip install -r ./myllm/requirements.txt
 ```
 
-Note: You may have to install missing dependencies such as cairo. It depends on your local. I'm running this in Ubuntu and was 
-missing cairo and gobject-instrospection-1.0. Just get the requirements installed completely. Some of these you will need installed 
-outside of your venv.
+### Additional Setup for Ubuntu
+
+Some dependencies must be installed on your system (not just the virtual environment):
 
 ```bash
 sudo apt update
@@ -33,51 +43,58 @@ sudo apt install ubuntu-pro-client
 sudo apt install unattended-upgrades
 ```
 
-You many need to install torch from latest stable like this in order to get requirements installed:
+If needed, install PyTorch manually:
 
 ```bash
 pip install torch==2.2.2+cpu -f https://download.pytorch.org/whl/torch_stable.html
 ```
 
-## llama.cpp
+---
 
-Now you need to clone https://github.com/ggml-org/llama.cpp into the parent folder of this code. Then in the root folder of that repo, 
-create a directory called build and in that directory run cmake. You may have to install cmake.
+## Step 2: Set Up `llama.cpp`
+
+Clone the [`llama.cpp`](https://github.com/ggml-org/llama.cpp) repo into your project’s parent directory. Then build it with CMake:
 
 ```bash
 cmake ..
 cmake --build .
 ```
 
-That might take a few minutes, so now's a good time for a break.
+> Note: You may need to install CMake if it's not already available on your system.
 
-## analyze.py: ollama, your analysis model, and analyzing your code
+---
 
-In my initial tests, I'm using `llama3.1:8b` and ollama version `0.5.4`. For production run, I might switch to `llama3.3` but that is slower on my A6000 and you might not have enough GPU VRAM to handle that big model. You need to put ollama into serve mode and then run the model.
+## Step 3: Analyze Your Code with `analyze.py`
+
+This step uses Ollama to run your model and generate prompt/response pairs from your legacy code.
+
+Make sure Ollama is running:
 
 ```bash
 ollama serve
 ollama run llama3.1:8b
 ```
 
-Now modify your `src/analyze.py` code to use the specific model you are using. You may want to change the file types you will analyze, 
-and modify the path to the code you want to analyze. 
+Edit `src/analyze.py` to specify:
+- Your Ollama model (e.g., `llama3.1:8b`)
+- The file extensions you want to scan
+- The path to your source code
 
 ```py
-OLLAMA_MODEL = "llama3.1:8b"  # e.g., "mistral", "codellama", etc.
+OLLAMA_MODEL = "llama3.1:8b" # e.g., "mistral", "codellama", etc.
 #...
         for file_path in list(self.code_dir.rglob('*.cs')) + list(self.code_dir.rglob('*.ts')) + list(self.code_dir.rglob('*.js')) + list(self.code_dir.rglob('*.html')) + list(self.code_dir.rglob('*.md')):
 #...
     csharp_path = '../../FuzzyStrings/src/DuoVia.FuzzyStrings'
 ```
 
-Now run your analyze.py code.
+Now run the analyzer:
 
 ```bash
 python analyze.py
 ```
 
-The output of analyze.py is the `out/finetune_dataset.jsonl` a JSON Lines formatted file with lines like this:
+This will generate a `out/finetune_dataset.jsonl` file with prompt-response pairs like:
 
 ```json
 {
@@ -86,39 +103,43 @@ The output of analyze.py is the `out/finetune_dataset.jsonl` a JSON Lines format
 }
 ```
 
-## format.py
+---
 
-Now run format.py to convert the pretty JSON into a form that the finetune.py can consume. Yes, I could eliminate this step, 
-but I wanted an intermediate step that would allow me to more easily examine the results of the analysis.
+## Step 4: Format the Data with `format.py`
+
+Convert the raw prompt-response output into a more structured format:
 
 ```bash
 python format.py
 ```
 
-This will result in the `out/formatted_finetune_dataset.jsonl` file being created.
+This produces:  
+`out/formatted_finetune_dataset.jsonl`
 
-## finetune.py
+---
 
-You will need a Hugging Face account and access token. Put the toke in a .env file in your src directory and be sure that you have installed python-dotenv in your Python venv.
+## Step 5: Fine-Tune Your Model with `finetune.py`
+
+To begin fine-tuning, make sure you have:
+
+- A Hugging Face account and access token
+- `python-dotenv` installed in your environment
+
+Create a `.env` file in `src/` with:
 
 ```ini
 HF_TOKEN=hf_******************************
 ```
 
-Before running finetune.py, be sure nvcc is installed.
+Ensure your system has `nvcc` (CUDA compiler) installed:
 
 ```bash
 sudo apt install nvidia-cuda-toolkit
 
 nvcc --version
-nvcc: NVIDIA (R) Cuda compiler driver
-Copyright (c) 2005-2023 NVIDIA Corporation
-Built on Fri_Jan__6_16:45:21_PST_2023
-Cuda compilation tools, release 12.0, V12.0.140
-Build cuda_12.0.r12.0/compiler.32267302_0
 ```
 
-You will also want to install the following:
+Install the training dependencies:
 
 ```bash
 pip install torch==2.5.1
@@ -126,116 +147,103 @@ pip install transformers peft accelerate
 pip install bitsandbytes==0.41.2
 ```
 
-You may need to run `python -m bitsandbytes` and make sure bitsandbytes can find everything and resolve if not.
-
-In my case, I had to:
+If you run into issues with `bitsandbytes`, make sure the required libraries are discoverable:
 
 ```bash
 sudo find / -name libcudart.so* 2>/dev/null
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu
 ```
 
-In my case, I had stupidly installed Linux NVIDIA drivers in my WSL2 instance. Don't do that.
+### Important Note for WSL2 Users
 
-WSL2 uses the Windows driver. Just download the latest NVIDIA driver for Windows and install it.
+If you're using WSL2, **do not install** Linux NVIDIA drivers. Instead, use the Windows driver and:
 
-If you're on plain old Linux, be sure your NVIDIA drivers for your distro are installed.
-
-I had to reinstall Windows drivers and then purge Linux drivers.
+1. Remove conflicting Linux drivers:
 
 ```bash
 sudo apt-get remove --purge '^nvidia-.*'
 sudo apt-get remove --purge cuda-toolkit-12-8
 sudo apt-get autoremove
-
 sudo rm -rf /usr/local/cuda*
 ```
 
-Then in a Windows terminal, kill WSL: `wsl --shutdown`
+2. Restart WSL:
 
-Then ONLY install CUDA toolkit and NOT drivers.
+```bash
+wsl --shutdown
+```
+
+3. Reinstall only the CUDA toolkit:
 
 ```bash
 sudo apt update
 sudo apt install -y cuda-toolkit-12-8
-
-nvidia-smi
-
-Sat Mar 29 14:16:32 2025       
-+-----------------------------------------------------------------------------------------+
-| NVIDIA-SMI 570.133.07             Driver Version: 572.83         CUDA Version: 12.8     |
-|-----------------------------------------+------------------------+----------------------+
-| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
-|                                         |                        |               MIG M. |
-|=========================================+========================+======================|
-|   0  NVIDIA RTX A6000               On  |   00000000:21:00.0  On |                  Off |
-| 30%   43C    P8             27W /  300W |    1418MiB /  49140MiB |      0%      Default |
-|                                         |                        |                  N/A |
-+-----------------------------------------+------------------------+----------------------+
-                                                                                         
-+-----------------------------------------------------------------------------------------+
-| Processes:                                                                              |
-|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
-|        ID   ID                                                               Usage      |
-|=========================================================================================|
-|    0   N/A  N/A              26      G   /Xwayland                             N/A      |
-|    0   N/A  N/A              35      G   /Xwayland                             N/A      |
-+-----------------------------------------------------------------------------------------+
 ```
 
-Once you see that view, the `python -m bitsandbytes` command will run successfully.
+4. Confirm setup:
 
-Not let's try running `python finetune.py`
+```bash
+nvidia-smi
+```
 
-Had to upgraded existing bitsandbytes:
+Once your environment is CUDA-ready, test `bitsandbytes`:
+
+```bash
+python -m bitsandbytes
+```
+
+Upgrade if necessary:
 
 ```bash
 pip install bitsandbytes --upgrade
 ```
 
-To `bitsandbytes-0.45.4`
-
-Then run
+Then run:
 
 ```bash
 python verify.py 
 ```
 
-To verify that CUDA is available and your GPU is connected.
+This script checks if CUDA and your GPU are accessible.
 
-Once `verify.py` runs successfully, follow the instructions printed to the console and 
-then run the prompt: `What can you tell me about DuoVia.FuzzyStrings?`
+Once verified, you're ready to fine-tune:
 
-And you will get an answer something like this:
-
-```
-DuoVia.FuzzyStrings is a library that provides various methods to perform fuzzy matching operations on strings such as Levenshtein Distance, Longest Common Subsequence and more.
-The library primarily targets .NET applications and provides the functionality through two interfaces: `IDuoviaStringMatching` and `IDuoviaFuzzyStrings`. The first interface 
-defines the core methods required for string matching operations while the second adds additional fuzzy-related methods such as Longest Common Subsequence.
-The library also includes an implementation of a Levenshtein Distance algorithm called `DuoViaLevenshteinDistance` which supports both one and two-dimensional arrays. You can find 
+```bash
+python finetune.py
 ```
 
-## Open WebUI
+You can now interact with your model:
 
-Here's a quick step-by-step tutorial on how to **install and run Open WebUI**, a user interface for interacting with language models like `my_codellama_7b` that we just created:
+> **Prompt:** What can you tell me about DuoVia.FuzzyStrings?
 
-**Requirements**
+**Sample Response:**
 
-- Docker & Docker Compose installed
-- Git (optional but useful)
-- Ollama (if you want to run models locally like `llama3`, `mistral`, etc.)
+```
+DuoVia.FuzzyStrings is a library that provides various methods to perform fuzzy matching operations on strings such as Levenshtein Distance, Longest Common Subsequence and more...
+```
 
-**Steps to Install and Run Open WebUI**
+---
 
-1. **Clone the Repo (Optional)**
+## Step 6: Use Open WebUI for a Friendly Interface
+
+Open WebUI provides a graphical front-end to interact with your fine-tuned model.
+
+### Prerequisites
+
+- Docker & Docker Compose
+- Git (optional)
+- Ollama installed
+
+### Install Open WebUI
+
+1. Clone the repository (optional):
+
 ```bash
 git clone https://github.com/open-webui/open-webui.git
 cd open-webui
 ```
 
-2. **Run with Docker (Recommended)**
-You can run Open WebUI with Docker using this command:
+2. Run the container:
 
 ```bash
 docker run -d \
@@ -246,18 +254,18 @@ docker run -d \
   ghcr.io/open-webui/open-webui:main
 ```
 
-This:
-- Runs Open WebUI in the background
-- Connects to Ollama on your local machine (`http://host.docker.internal:11434`)
-- Exposes the web UI on `http://localhost:3000`
+This will:
+- Launch the web app at `http://localhost:3000`
+- Connect to your Ollama instance
 
-3. **Access the UI**
-Go to: `http://localhost:3000`
-
-
-Then run a model like:
+3. Start your model:
 
 ```bash
 ollama run my_codellama_7b
 ```
 
+Now you can interact with your model directly from the browser.
+
+---
+
+Feel free to customize each step based on your environment, codebase, and model preferences. Happy fine-tuning!
