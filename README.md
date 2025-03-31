@@ -280,4 +280,4 @@ AMD Ryzen Threadripper PRO 5975WX 32-Cores, 3600 Mhz. 128GB RAM, NVIDIA RTX A600
 
 You could do it on larger repos or document repos. Preparing the data is key. I recommend you experiment with smaller datasets to begin and refine iteratively.
 
-Larger data sets would produce better results but require more effort to create the fine tuned set, and, of course, you would wabt to stream those into the fine tuning algorithm rather than reading it all into memory. For larger, production ready results, I'd probably want a system with 256GB RAM and an NVIDIA A100 with 80GB VRAM.
+Larger data sets would produce better results but require more effort to create the fine tuned set, and, of course, you would want to stream those into the fine tuning algorithm rather than reading it all into memory. For larger, production ready results, I'd probably want a system with 256GB RAM and an NVIDIA A100 with 80GB VRAM.
