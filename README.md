@@ -269,3 +269,15 @@ Now you can interact with your model directly from the browser.
 ---
 
 Feel free to customize each step based on your environment, codebase, and model preferences. Happy fine-tuning!
+
+---
+
+### Specs
+
+A few people have asked about the machine I'm using. Here's a few details.
+
+AMD Ryzen Threadripper PRO 5975WX 32-Cores, 3600 Mhz. 128GB RAM, NVIDIA RTX A6000 with 48GB VRAM. 
+
+You could do it on larger repos or document repos. Preparing the data is key. I recommend you experiment with smaller datasets to begin and refine iteratively.
+
+Larger data sets would produce better results but require more effort to create the fine tuned set, and, of course, you would wabt to stream those into the fine tuning algorithm rather than reading it all into memory. For larger, production ready results, I'd probably want a system with 256GB RAM and an NVIDIA A100 with 80GB VRAM.
